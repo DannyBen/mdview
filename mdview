@@ -6,14 +6,12 @@ usage() {
 
 init_config() {
   declare -g MARKDOWN_FILE="$1"
-  declare -g TMP_DIR
-  TMP_DIR="$(mktemp -d)"
-  declare -g HTML_FILE="$TMP_DIR/index.html"
+  declare -g HTML_FILE="$PWD/index.html"
   declare -g PORT=3000
   declare -g BIND_ADDR="0.0.0.0"
-  declare -g SERVER_LOG="$TMP_DIR/server.log"
+  declare -g SERVER_LOG="$PWD/mdview.log"
   declare -g -a SERVER_COMMAND=(
-    ruby -run -ehttpd "$TMP_DIR"
+    ruby -run -ehttpd "$PWD"
     -b "$BIND_ADDR"
     -p"$PORT"
   )
@@ -26,11 +24,14 @@ validate_input() {
     usage
     exit 1
   fi
+  if [[ -e "$HTML_FILE" ]]; then
+    echo "Error: $HTML_FILE already exists; refusing to overwrite." >&2
+    exit 1
+  fi
 }
 
 print_config() {
   print_kv "markdown_file" "$MARKDOWN_FILE"
-  print_kv "tmp_dir" "$TMP_DIR"
   print_kv "html_file" "$HTML_FILE"
   print_kv "port" "$PORT"
   print_kv "bind_addr" "$BIND_ADDR"
@@ -105,8 +106,11 @@ cleanup() {
     kill "$SERVER_PID" >/dev/null 2>&1 || true
     wait "$SERVER_PID" >/dev/null 2>&1 || true
   fi
-  if [[ -n "${TMP_DIR:-}" ]]; then
-    rm -rf "$TMP_DIR"
+  if [[ -n "${HTML_FILE:-}" && -f "$HTML_FILE" ]]; then
+    rm -f "$HTML_FILE"
+  fi
+  if [[ -n "${SERVER_LOG:-}" && -f "$SERVER_LOG" ]]; then
+    rm -f "$SERVER_LOG"
   fi
 }
 
