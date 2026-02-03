@@ -31,3 +31,5 @@ mdview README.md
 
 - Uses Ruby's built-in `-run -ehttpd` server by default.
 - Server reference list (if you want to swap it): https://gist.github.com/willurd/5720255
+
+[executable]: https://github.com/DannyBen/mdview/blob/master/mdview
