@@ -1,0 +1,140 @@
+#!/bin/bash
+
+usage() {
+  echo "Usage: mdview MARKDOWN_FILE"
+}
+
+init_config() {
+  declare -g MARKDOWN_FILE="$1"
+  declare -g TMP_DIR
+  TMP_DIR="$(mktemp -d)"
+  declare -g HTML_FILE="$TMP_DIR/index.html"
+  declare -g PORT=3000
+  declare -g BIND_ADDR="0.0.0.0"
+  declare -g SERVER_LOG="$TMP_DIR/server.log"
+  declare -g -a SERVER_COMMAND=(
+    ruby -run -ehttpd "$TMP_DIR"
+    -b "$BIND_ADDR"
+    -p"$PORT"
+  )
+  declare -g SERVER_PID=""
+  # Server list reference: https://gist.github.com/willurd/5720255
+}
+
+validate_input() {
+  if [[ -z "${MARKDOWN_FILE:-}" || ! -f "$MARKDOWN_FILE" ]]; then
+    usage
+    exit 1
+  fi
+}
+
+print_config() {
+  print_kv "markdown_file" "$MARKDOWN_FILE"
+  print_kv "tmp_dir" "$TMP_DIR"
+  print_kv "html_file" "$HTML_FILE"
+  print_kv "port" "$PORT"
+  print_kv "bind_addr" "$BIND_ADDR"
+  print_kv "server_log" "$SERVER_LOG"
+  print_kv "server_cmd" "${SERVER_COMMAND[*]}"
+  if [[ -n "${GITHUB_ACCESS_TOKEN:-}" ]]; then
+    print_kv "github_access_token" "set"
+  else
+    print_kv "github_access_token" "not set"
+  fi
+  echo
+}
+
+print_kv() {
+  local key="$1"
+  local value="$2"
+  local green="\033[0;32m"
+  local reset="\033[0m"
+  printf "${green}%-20s${reset} %s\n" "${key}:" "$value"
+}
+
+render_md() {
+  print_kv "rendering" "$MARKDOWN_FILE"
+  local auth_header=""
+  local rendered=""
+  [[ -n "${GITHUB_ACCESS_TOKEN:-}" ]] && auth_header="Authorization: Bearer $GITHUB_ACCESS_TOKEN"
+  rendered=$(curl -s -H "$auth_header" -H "Content-Type: text/plain" --data-binary @"$MARKDOWN_FILE" "https://api.github.com/markdown/raw")
+  template "$rendered" > "$HTML_FILE"
+}
+
+template() {
+  local body="$1"
+  cat <<EOF
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.8.1/github-markdown.min.css">
+    <style>
+      .markdown-body {
+        box-sizing: border-box;
+        min-width: 200px;
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 45px;
+      }
+
+      @media (max-width: 767px) {
+        .markdown-body {
+          padding: 15px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <article class="markdown-body">
+$body
+    </article>
+  </body>
+</html>
+EOF
+}
+
+start_server() {
+  "${SERVER_COMMAND[@]}" >"$SERVER_LOG" 2>&1 &
+  SERVER_PID=$!
+}
+
+cleanup() {
+  if [[ -n "${SERVER_PID:-}" ]]; then
+    kill "$SERVER_PID" >/dev/null 2>&1 || true
+    wait "$SERVER_PID" >/dev/null 2>&1 || true
+  fi
+  if [[ -n "${TMP_DIR:-}" ]]; then
+    rm -rf "$TMP_DIR"
+  fi
+}
+
+watch_loop() {
+  local last_mod
+  local current_mod
+  last_mod=$(stat -c %Y "$MARKDOWN_FILE")
+  while true; do
+    sleep 2
+    current_mod=$(stat -c %Y "$MARKDOWN_FILE")
+    if [[ "$current_mod" -gt "$last_mod" ]]; then
+      render_md
+      last_mod=$current_mod
+    fi
+  done
+}
+
+main() {
+  set -euo pipefail
+  init_config "${1:-}"
+  validate_input
+  render_md
+  start_server
+  trap cleanup EXIT INT TERM
+  print_config
+  print_kv "serving_url" "http://localhost:$PORT"
+  print_kv "monitoring" "$MARKDOWN_FILE (Ctrl+C to exit)"
+  watch_loop
+}
+
+main "${1:-}"
