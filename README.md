@@ -7,7 +7,14 @@ local HTML file.
 
 ## Install
 
-- Put `mdview` in your `PATH` and make it executable.
+Download the executable [`mdview`][executable] bash script to any directory
+that is already in your PATH. 
+
+```shell
+# This downloads the latest release version
+wget https://get.dannyb.co/mdview
+sudo install mdview /usr/local/bin
+```
 
 ## Usage
 
