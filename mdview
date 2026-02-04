@@ -14,9 +14,8 @@ init_config() {
   declare -g BIND_ADDR="0.0.0.0"
   declare -g SERVER_LOG="$PWD/mdview.log"
   declare -g -a SERVER_COMMAND=(
-    ruby -run -ehttpd "$PWD"
-    -b "$BIND_ADDR"
-    -p"$PORT"
+    python3 -m http.server "$PORT"
+    --bind "$BIND_ADDR"
   )
   declare -g SERVER_PID=""
   # Server list reference: https://gist.github.com/willurd/5720255

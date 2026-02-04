@@ -29,7 +29,7 @@ mdview README.md
 
 ## Server
 
-- Uses Ruby's built-in `-run -ehttpd` server by default.
+- Uses Python's built-in `http.server` by default.
 - Server reference list (if you want to swap it): https://gist.github.com/willurd/5720255
 
 [executable]: https://github.com/DannyBen/mdview/blob/master/mdview
