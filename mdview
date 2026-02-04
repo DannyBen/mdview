@@ -28,13 +28,18 @@ resolve_markdown_file() {
 init_config() {
   declare -g MARKDOWN_FILE=""
   MARKDOWN_FILE=$(resolve_markdown_file "${1:-}") || true
-  declare -g HTML_FILE="index.html"
+  declare -g SERVER_DIR="."
+  if [[ -n "${MARKDOWN_FILE:-}" ]]; then
+    SERVER_DIR=$(dirname "$MARKDOWN_FILE")
+  fi
+  declare -g HTML_FILE="$SERVER_DIR/index.html"
   declare -g PORT=3000
   declare -g BIND_ADDR="0.0.0.0"
   declare -g SERVER_LOG="mdview.log"
   declare -g -a SERVER_COMMAND=(
     python3 -m http.server "$PORT"
     --bind "$BIND_ADDR"
+    --directory "$SERVER_DIR"
   )
   declare -g SERVER_PID=""
   # Server list reference: https://gist.github.com/willurd/5720255
@@ -54,6 +59,7 @@ validate_input() {
 print_config() {
   print_kv "markdown_file" "$MARKDOWN_FILE"
   print_kv "html_file" "$HTML_FILE"
+  print_kv "server_dir" "$SERVER_DIR"
   print_kv "port" "$PORT"
   print_kv "bind_addr" "$BIND_ADDR"
   print_kv "server_log" "$SERVER_LOG"
