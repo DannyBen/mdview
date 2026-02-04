@@ -3,16 +3,35 @@
 VERSION="0.1.0"
 
 usage() {
-  echo "Usage: mdview MARKDOWN_FILE"
+  echo "Usage: mdview [MARKDOWN_FILE]"
   echo "       mdview -v|--version"
 }
 
+resolve_markdown_file() {
+  local candidate=""
+  if [[ -n "${1:-}" ]]; then
+    echo "$1"
+    return 0
+  fi
+  if [[ -f "README.md" ]]; then
+    echo "README.md"
+    return 0
+  fi
+  candidate=$(ls -1 *.md 2>/dev/null | sort | head -n 1)
+  if [[ -n "$candidate" ]]; then
+    echo "$candidate"
+    return 0
+  fi
+  return 1
+}
+
 init_config() {
-  declare -g MARKDOWN_FILE="$1"
-  declare -g HTML_FILE="$PWD/index.html"
+  declare -g MARKDOWN_FILE=""
+  MARKDOWN_FILE=$(resolve_markdown_file "${1:-}") || true
+  declare -g HTML_FILE="index.html"
   declare -g PORT=3000
   declare -g BIND_ADDR="0.0.0.0"
-  declare -g SERVER_LOG="$PWD/mdview.log"
+  declare -g SERVER_LOG="mdview.log"
   declare -g -a SERVER_COMMAND=(
     python3 -m http.server "$PORT"
     --bind "$BIND_ADDR"
