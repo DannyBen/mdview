@@ -1,6 +1,6 @@
 # mdview
 
-![repocard](repocard.svg)
+![repocard](https://repocard.dannyben.com/svg/mdview.svg)
 
 Minimal Markdown previewer that renders via GitHub's Markdown API and serves a
 local HTML file.
